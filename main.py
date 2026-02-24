@@ -259,7 +259,7 @@ async def monitor(app):
 
 # ================= MAIN =================
 
-async def main():
+def main():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
@@ -275,7 +275,7 @@ async def main():
     keep_alive()
 
     print("🚀 Professional Monitor Bot Running")
-    await application.run_polling()
+    application.run_polling()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
