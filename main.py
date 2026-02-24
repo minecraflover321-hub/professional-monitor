@@ -19,7 +19,7 @@ from telegram.ext import (
 # ================= CONFIG =================
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-OWNER_ID = int(os.getenv("OWNER_ID", 0))  # 👈 FIX: Default value 0 agar env variable na ho
+OWNER_ID = int(os.getenv("OWNER_ID", 0))
 CHECK_INTERVAL = 300
 CONFIRM_LIMIT = 3
 MAX_USERNAMES = 20
@@ -38,7 +38,7 @@ def run_web():
     web.run(host="0.0.0.0", port=port)
 
 def keep_alive():
-    threading.Thread(target=run_web, daemon=True).start()  # 👈 FIX: daemon=True add kiya
+    threading.Thread(target=run_web, daemon=True).start()
 
 # ================= DATABASE =================
 
@@ -46,7 +46,7 @@ def load_db():
     if not os.path.exists(DB_FILE):
         return {"users": {}, "admins": []}
     with open(DB_FILE, "r") as f:
-        try:  # 👈 FIX: try-except add kiya corrupt file handle karne ke liye
+        try:
             return json.load(f)
         except:
             return {"users": {}, "admins": []}
@@ -64,7 +64,7 @@ async def check_username(username):
 # ================= UTIL =================
 
 def is_admin(user_id, db):
-    return user_id == OWNER_ID or user_id in db.get("admins", [])  # 👈 FIX: .get() use kiya
+    return user_id == OWNER_ID or user_id in db.get("admins", [])
 
 def subscription_active(user):
     expiry = datetime.strptime(user["expiry"], "%Y-%m-%d")
@@ -80,7 +80,7 @@ def main_menu():
         [InlineKeyboardButton("📢 Broadcast", callback_data="broadcast")],
     ])
 
-# ================= BUTTON HANDLER (ADD KARNA HI PADEGA) =================
+# ================= BUTTON HANDLER =================
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -145,7 +145,7 @@ async def watch(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     db = load_db()
     
-    if user_id not in db["users"]:  # 👈 FIX: User exist check
+    if user_id not in db["users"]:
         await update.message.reply_text("❌ Please /start first")
         return
         
@@ -178,7 +178,7 @@ async def manual_ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     db = load_db()
     
-    if user_id not in db["users"]:  # 👈 FIX: User exist check
+    if user_id not in db["users"]:
         await update.message.reply_text("❌ Please /start first")
         return
         
@@ -216,7 +216,7 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Admin only command")
         return
         
-    if len(context.args) < 2:  # 👈 FIX: Args check
+    if len(context.args) < 2:
         await update.message.reply_text("Usage: /approve user_id days")
         return
 
@@ -255,7 +255,7 @@ async def add_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Owner only command")
         return
         
-    if not context.args:  # 👈 FIX: Args check
+    if not context.args:
         await update.message.reply_text("Usage: /addadmin user_id")
         return
 
@@ -280,7 +280,7 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Admin only command")
         return
         
-    if not context.args:  # 👈 FIX: Args check
+    if not context.args:
         await update.message.reply_text("Usage: /broadcast message")
         return
 
@@ -304,12 +304,12 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def monitor(app):
     while True:
-        try:  # 👈 FIX: Try-except to prevent crashes
+        try:
             db = load_db()
 
             for user_id, user in db["users"].items():
 
-                for username in list(user.get("watch", [])):  # 👈 FIX: .get() use
+                for username in list(user.get("watch", [])):
                     status = await check_username(username)
 
                     if status == "BANNED":
@@ -321,7 +321,8 @@ async def monitor(app):
                         try:
                             await app.bot.send_message(
                                 chat_id=int(user_id),
-                                text=f"🚫 *BANNED DETECTED*\n━━━━━━━━━━━━━━━━━━\nUsername: {username}"
+                                text=f"🚫 *BANNED DETECTED*\n━━━━━━━━━━━━━━━━━━\nUsername: {username}",
+                                parse_mode='Markdown'
                             )
                         except:
                             pass
@@ -329,7 +330,7 @@ async def monitor(app):
                         user["ban"].append(username)
                         user["confirm"][username] = 0
 
-                for username in list(user.get("ban", [])):  # 👈 FIX: .get() use
+                for username in list(user.get("ban", [])):
                     status = await check_username(username)
 
                     if status == "ACTIVE":
@@ -341,7 +342,8 @@ async def monitor(app):
                         try:
                             await app.bot.send_message(
                                 chat_id=int(user_id),
-                                text=f"✅ *UNBANNED DETECTED*\n━━━━━━━━━━━━━━━━━━\nUsername: {username}"
+                                text=f"✅ *UNBANNED DETECTED*\n━━━━━━━━━━━━━━━━━━\nUsername: {username}",
+                                parse_mode='Markdown'
                             )
                         except:
                             pass
@@ -355,9 +357,10 @@ async def monitor(app):
             
         await asyncio.sleep(CHECK_INTERVAL)
 
-# ================= MAIN =================
+# ================= MAIN (FIXED) =================
 
-async def main():
+async def run_bot():
+    """Bot ko run karne ka sahi tarika"""
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
@@ -367,14 +370,22 @@ async def main():
     application.add_handler(CommandHandler("approve", approve))
     application.add_handler(CommandHandler("addadmin", add_admin))
     application.add_handler(CommandHandler("broadcast", broadcast))
-    application.add_handler(CallbackQueryHandler(button_handler))  # 👈 FIX: Button handler add
+    application.add_handler(CallbackQueryHandler(button_handler))
 
     application.create_task(monitor(application))
 
     keep_alive()
 
     print("🚀 Professional Monitor Bot Running")
-    await application.run_polling()
+    
+    # 👇 YEH FIX HAI - Sahi tarike se run_polling()
+    await application.initialize()
+    await application.start()
+    await application.updater.start_polling()
+    
+    # Idle while bot runs
+    while True:
+        await asyncio.sleep(3600)  # Sleep for an hour
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(run_bot())
