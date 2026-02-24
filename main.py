@@ -10,6 +10,7 @@ from telegram.ext import (
     CommandHandler,
     ContextTypes,
     Application,
+    CallbackQueryHandler,  # 👈 YEH IMPORTANT LINE ADD KAR
 )
 
 # ================= CONFIG =================
@@ -81,6 +82,35 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         }
         save_db(db)
     await update.message.reply_text("🔥 PROFESSIONAL MONITOR BOT\n━━━━━━━━━━━━━━━━━━\nPowered by @proxyfxc", reply_markup=main_menu())
+
+# 👇 YEH NAYA HANDLER ADD KAR - BUTTON CLICK HANDLE KARNE KE LIYE
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = str(query.from_user.id)
+    db = load_db()
+    user = db["users"].get(user_id)
+    
+    if not user or not subscription_active(user):
+        await query.edit_message_text("❌ Subscription expired.")
+        return
+    
+    button_map = {
+        "watch": "🔍 *WATCH*\n━━━━━━━━━━━━━━━━━━\nUse: /watch username",
+        "ban": "🚫 *BAN*\n━━━━━━━━━━━━━━━━━━\nUse: /ban username",
+        "status": "📊 *STATUS*\n━━━━━━━━━━━━━━━━━━\nUse: /status username",
+        "approve": "👑 *APPROVE*\n━━━━━━━━━━━━━━━━━━\nUse: /approve user_id days\n(Admin only)",
+        "addadmin": "➕ *ADD ADMIN*\n━━━━━━━━━━━━━━━━━━\nUse: /addadmin user_id\n(Owner only)",
+        "broadcast": "📢 *BROADCAST*\n━━━━━━━━━━━━━━━━━━\nUse: /broadcast message\n(Admin only)",
+    }
+    
+    if query.data in button_map:
+        await query.edit_message_text(
+            text=button_map[query.data],
+            parse_mode='Markdown',
+            reply_markup=main_menu()
+        )
 
 async def watch(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
@@ -188,6 +218,7 @@ def main():
     application.add_handler(CommandHandler("approve", approve))
     application.add_handler(CommandHandler("addadmin", add_admin))
     application.add_handler(CommandHandler("broadcast", broadcast))
+    application.add_handler(CallbackQueryHandler(button_handler))  # 👈 YEH IMPORTANT LINE ADD KAR
 
     # Correct way to run background tasks in python-telegram-bot v20+
     job_queue = application.job_queue
